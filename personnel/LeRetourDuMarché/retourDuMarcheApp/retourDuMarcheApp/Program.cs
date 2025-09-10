@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MyApp
+﻿namespace MyApp
 {
     internal class Program
     {
@@ -107,13 +105,35 @@ namespace MyApp
             new Product(15, "Lea", "Groseilles,", 12, "kg", 3.5)
         };
 
-            var livrable1 = listeProduits.Select(x => (seller: x.Producteur.Substring(0, Math.Min(3, x.Producteur.Length - 1)) + "..." + x.Producteur.Last(), product : x.NomProduit, CA : x.Quantite * x.PrixParUnite)).ToList();
+            Func<string, string> AnonymiseName = name => name.Substring(0, Math.Min(3, name.Length - 1)) + "..." + name.Last();
+            var i18n = new Dictionary<string, string>()
+                {
+                    { "Pommes","Apples"},
+                    { "Poires","Pears"},
+                    { "Pastèques","Watermelons"},
+                    { "Melons","Melons"},
+                    { "Noix","Nuts"},
+                    { "Raisin","Grapes"},
+                    { "Pruneaux","Plums"},
+                    { "Myrtilles","Blueberries"},
+                    { "Groseilles","Berries"},
+                    { "Tomates","Tomatoes"},
+                    { "Courges","Pumpkins"},
+                    { "Pêches","Peaches"},
+                    { "Haricots","Beans"}
+                };
 
-            Console.WriteLine("Seller\tProduct\tCA");
-            livrable1.ForEach(x => Console.WriteLine($"{x.seller}\t{x.product}\t{x.CA}"));
+            Func<string, string> TranslateProductName = productName => i18n.ContainsKey(productName) ? i18n[productName] : productName;
 
-            Func<string, string> EscapeCsvValue = value =>
+            var livrable1 = listeProduits.Select(x => (seller: x.Producteur == null ? "" : AnonymiseName(x.Producteur), product: x.NomProduit == null ? "" : TranslateProductName(x.NomProduit), CA: x.Quantite * x.PrixParUnite)).ToList();
+
+            Console.WriteLine($"${"Seller", 10} | {"Product",10} | {"CA",10}");
+            livrable1.ForEach(x => Console.WriteLine($"{x.seller, 10} | {x.product, 10} | {x.CA,10}"));
+
+            Func<string?, string> EscapeCsvValue = value =>
             {
+                if (value == null) return "";
+
                 if (value.Contains(",") || value.Contains("\"") || value.Contains("\r") || value.Contains("\n"))
                 {
                     return $"\"{value.Replace("\"", "\"\"")}\"";
@@ -124,10 +144,9 @@ namespace MyApp
             using (StreamWriter sw = new("export.csv"))
             {
                 sw.WriteLine("Seller,Product,CA");
-                livrable1.ForEach(x => sw.WriteLine($"{EscapeCsvValue(x.seller)},{EscapeCsvValue(x.product)},{x.CA}"));
-             
-            }
+                livrable1.ForEach(x => sw.WriteLine($"{EscapeCsvValue(x.seller)},{EscapeCsvValue(x.product)},{EscapeCsvValue(x.CA.ToString())}"));
 
+            }
         }
     }
 }
