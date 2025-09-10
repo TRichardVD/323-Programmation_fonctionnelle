@@ -106,6 +106,7 @@
         };
 
             Func<string, string> AnonymiseName = name => name.Substring(0, Math.Min(3, name.Length - 1)) + "..." + name.Last();
+
             var i18n = new Dictionary<string, string>()
                 {
                     { "Pommes","Apples"},
@@ -122,6 +123,7 @@
                     { "Pêches","Peaches"},
                     { "Haricots","Beans"}
                 };
+
 
             Func<string, string> TranslateProductName = productName => i18n.ContainsKey(productName) ? i18n[productName] : productName;
 
