@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MyApp
+﻿namespace MyApp
 {
     internal class Program
     {
@@ -107,13 +105,17 @@ namespace MyApp
             new Product(15, "Lea", "Groseilles,", 12, "kg", 3.5)
         };
 
-            var livrable1 = listeProduits.Select(x => (seller: x.Producteur.Substring(0, Math.Min(3, x.Producteur.Length - 1)) + "..." + x.Producteur.Last(), product : x.NomProduit, CA : x.Quantite * x.PrixParUnite)).ToList();
+            Func<string, string> AnonymiseName = name => name.Substring(0, Math.Min(3, name.Length - 1)) + "..." + name.Last();
+
+            var livrable1 = listeProduits.Select(x => (seller: x.Producteur == null ? "" : AnonymiseName(x.Producteur), product: x.NomProduit, CA: x.Quantite * x.PrixParUnite)).ToList();
 
             Console.WriteLine("Seller\tProduct\tCA");
             livrable1.ForEach(x => Console.WriteLine($"{x.seller}\t{x.product}\t{x.CA}"));
 
-            Func<string, string> EscapeCsvValue = value =>
+            Func<string?, string> EscapeCsvValue = value =>
             {
+                if (value == null) return "";
+
                 if (value.Contains(",") || value.Contains("\"") || value.Contains("\r") || value.Contains("\n"))
                 {
                     return $"\"{value.Replace("\"", "\"\"")}\"";
@@ -124,10 +126,9 @@ namespace MyApp
             using (StreamWriter sw = new("export.csv"))
             {
                 sw.WriteLine("Seller,Product,CA");
-                livrable1.ForEach(x => sw.WriteLine($"{EscapeCsvValue(x.seller)},{EscapeCsvValue(x.product)},{x.CA}"));
-             
-            }
+                livrable1.ForEach(x => sw.WriteLine($"{EscapeCsvValue(x.seller)},{EscapeCsvValue(x.product)},{EscapeCsvValue(x.CA.ToString())}"));
 
+            }
         }
     }
 }
