@@ -29,9 +29,11 @@ new Movie() { Title = "Oldboy", Genre = "Thriller", Rating = 8.4, Year = 2003, L
 };
 
             // Step 1
-            frenchMovies.Where(x => x.Genre == "Comédie" && x.Genre == "Drame");
+            Func<IEnumerable<Movie>> Step1 = () => frenchMovies.Where(x => x.Genre == "Comédie" && x.Genre == "Drame");
 
             // Step 2
+            Func<IEnumerable<Movie>> Step1 = () => frenchMovies.Where(x => x.Genre == "Comédie" && x.Genre == "Drame");
+
 
             // Step 3
 
