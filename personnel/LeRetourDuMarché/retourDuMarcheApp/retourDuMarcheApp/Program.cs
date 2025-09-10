@@ -1,4 +1,7 @@
-﻿namespace MyApp
+﻿using Newtonsoft.Json;
+using System.ComponentModel;
+
+namespace MyApp
 {
     internal class Program
     {
@@ -21,6 +24,15 @@
                 PrixParUnite = prixParUnite;
             }
         }
+
+        public enum Categories
+        {
+            NA,
+            Faible,
+            Normal,
+            Eleve
+        }
+       ;
 
         static void Main(string[] args)
         {
@@ -105,7 +117,7 @@
             new Product(15, "Lea", "Groseilles,", 12, "kg", 3.5)
         };
 
-            Func<string, string> AnonymiseName = name => name.Substring(0, Math.Min(3, name.Length - 1)) + "..." + name.Last();
+            Func<string, string> AnonymiseName = name => name.First() + name.Length.ToString() + name.Last();
 
             var i18n = new Dictionary<string, string>()
                 {
@@ -127,28 +139,59 @@
 
             Func<string, string> TranslateProductName = productName => i18n.ContainsKey(productName) ? i18n[productName] : productName;
 
-            var livrable1 = listeProduits.Select(x => (seller: x.Producteur == null ? "" : AnonymiseName(x.Producteur), product: x.NomProduit == null ? "" : TranslateProductName(x.NomProduit), CA: x.Quantite * x.PrixParUnite)).ToList();
 
-            Console.WriteLine($"${"Seller", 10} | {"Product",10} | {"CA",10}");
-            livrable1.ForEach(x => Console.WriteLine($"{x.seller, 10} | {x.product, 10} | {x.CA,10}"));
 
-            Func<string?, string> EscapeCsvValue = value =>
-            {
-                if (value == null) return "";
-
-                if (value.Contains(",") || value.Contains("\"") || value.Contains("\r") || value.Contains("\n"))
+            Func<int?, Categories> CategorizeProduct = stock =>
                 {
-                    return $"\"{value.Replace("\"", "\"\"")}\"";
+                    if (stock == null) return Categories.NA;
+                    else if (stock < 10) return Categories.Faible;
+                    else if (stock <= 15) return Categories.Normal;
+                    else return Categories.Eleve;
+                };
+
+            Func<double, double, double> CalculeCA = (qty, price) => qty * price;
+
+            Func<double, Categories, double> CalculePrice = (basePrice, category) =>
+            {
+                switch (category)
+                {
+                    case Categories.Faible:
+                        return basePrice * 1.15;
+                    case Categories.Normal:
+                        return basePrice * 1.05;
+                    default:
+                        return basePrice;
                 }
-                return value;
             };
 
-            using (StreamWriter sw = new("export.csv"))
-            {
-                sw.WriteLine("Seller,Product,CA");
-                livrable1.ForEach(x => sw.WriteLine($"{EscapeCsvValue(x.seller)},{EscapeCsvValue(x.product)},{EscapeCsvValue(x.CA.ToString())}"));
 
-            }
+            var livrable1 = listeProduits.Select(x =>
+            {
+                var category = CategorizeProduct(x.Quantite);
+                var ca = CalculeCA(Convert.ToDouble(x.Quantite), Convert.ToDouble(x.PrixParUnite));
+                return (
+                    seller: x.Producteur == null ? "" : AnonymiseName(x.Producteur),
+                    product: x.NomProduit == null ? "" : TranslateProductName(x.NomProduit),
+                    Category: category,
+                    price: CalculePrice(Convert.ToDouble(x.PrixParUnite), category),
+                    CA: ca,
+                    rentabilite : ca > 100 ? "Premium" : "Standard"
+
+                );
+            }).ToList();
+
+            Console.WriteLine($"{"Seller",15} | {"Product",15} | {"CA",15} | {"Category",15} | {"Indicateur de Rentabilité",15}");
+            Console.WriteLine(new String('=', Console.WindowWidth));
+            livrable1.ForEach(x => Console.WriteLine($"{x.seller,15} | {x.product,15} | {x.CA,15} | {"Stock " + x.Category.ToString(),15} | {x.rentabilite,15}"));
+
+            List<string> json = new();
+
+            json.Add("[");
+            json.AddRange(livrable1.Select(x => $"{{ \"Seller\" : \"{x.seller}\", \"Product\" : \"{x.product}\", \"CA\" : \"{x.CA}\", \"Category\" : \"{x.Category}\"}}, \"Indicateur de Rentabilité\" : \"{x.rentabilite}\"}},"));  // TODO : Enlever derniere ,
+            json.Add("]");
+
+            File.WriteAllLines("export.json", json);
+
         }
     }
 }
