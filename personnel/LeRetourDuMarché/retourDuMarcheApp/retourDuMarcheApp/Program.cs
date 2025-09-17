@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.ComponentModel;
+using System.Linq;
 
 namespace MyApp
 {
@@ -168,12 +169,13 @@ namespace MyApp
             var livrable1 = listeProduits.Select(x =>
             {
                 var category = CategorizeProduct(x.Quantite);
-                var ca = CalculeCA(Convert.ToDouble(x.Quantite), Convert.ToDouble(x.PrixParUnite));
+                var price = CalculePrice(Convert.ToDouble(x.PrixParUnite), category);
+                var ca = CalculeCA(Convert.ToDouble(x.Quantite),price);
                 return (
                     seller: x.Producteur == null ? "" : AnonymiseName(x.Producteur),
                     product: x.NomProduit == null ? "" : TranslateProductName(x.NomProduit),
                     Category: category,
-                    price: CalculePrice(Convert.ToDouble(x.PrixParUnite), category),
+                    price: price,
                     CA: ca,
                     rentabilite : ca > 100 ? "Premium" : "Standard"
 
@@ -187,7 +189,10 @@ namespace MyApp
             List<string> json = new();
 
             json.Add("[");
-            json.AddRange(livrable1.Select(x => $"{{ \"Seller\" : \"{x.seller}\", \"Product\" : \"{x.product}\", \"CA\" : \"{x.CA}\", \"Category\" : \"{x.Category}\"}}, \"Indicateur de Rentabilité\" : \"{x.rentabilite}\"}},"));  // TODO : Enlever derniere ,
+            json.AddRange(livrable1.Select(x => $"{{ \"Seller\" : \"{x.seller}\", \"Product\" : \"{x.product}\", \"CA\" : \"{x.CA}\", \"Category\" : \"{x.Category}\"}}, \"Indicateur de Rentabilité\" : \"{x.rentabilite}\"}},"));
+            json[json.Count - 1] = json.Last().Remove(json.Last().LastIndexOf(","));
+
+            
             json.Add("]");
 
             File.WriteAllLines("export.json", json);
