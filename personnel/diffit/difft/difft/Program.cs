@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace MyApp
 {
@@ -19,28 +20,30 @@ namespace MyApp
 
             Console.Write("Fichier A: ");
             string? pathA = Console.ReadLine();
+            if (pathA == null || pathA == "") pathA = @"C:\Users\pw57drg\Documents\GitHub\323-Programmation_fonctionnelle\personnel\diffit\v1.txt";
 
             Console.Write("Fichier B: ");
             string? pathB = Console.ReadLine();
+            if (pathB == null || pathB == "") pathB = @"C:\Users\pw57drg\Documents\GitHub\323-Programmation_fonctionnelle\personnel\diffit\v2.txt";
 
             // Vérification des entrées utilisateur
             var paths = new string?[] { pathA, pathB };
             bool filesAreValid = paths.Aggregate(true, (a, b) => a && b != null && File.Exists(b));
             if (!filesAreValid)
             {
-                Console.WriteLine("Erreur: les fichiers doivent être existants et accessibles !");
+                Console.WriteLine("Erreur: les fichiers doivent être existants et accessibles !" );
                 Environment.Exit(-2);
             }
 
             /// CHARGEMENT DES DONNÉES
             // TODO: 01 Charger le contenu texte du fichier A (indice: File.ReadAllLines...)
-            string[] linesA = { "..." };
+            string[] linesA = File.ReadAllLines(pathA);
 
             // TODO: 02 Charger le contenu texte du fichier B (indice: File.ReadAllLines...)
-            string[] linesB = { "..." };
+            string[] linesB = File.ReadAllLines(pathB);
 
             // TODO: 03 Vérifier que les fichier ont le même nombre de lignes
-            if (true)
+            if (linesA.Count() != linesB.Count())
             {
                 Console.WriteLine("Erreur: les fichiers n'ont pas le même nombre de ligne");
                 Environment.Exit(-2);
@@ -52,9 +55,9 @@ namespace MyApp
             // Une fonction de nettoyage reçoit un texte (une ligne de fichier) et renvoie cette même ligne adaptée
             // Il existe la fonction Replace sur les string...
             // Le caractère tabulation s’écrit \t
-            Func<string, string> cleanSpaces = text => text;
-            Func<string, string> cleanTabs = text => text;
-            Func<string, string> enforceCase = text => text;
+            Func<string, string> cleanSpaces = text => text.Replace("", "");
+            Func<string, string> cleanTabs = text => text.Replace("\t", "");
+            Func<string, string> enforceCase = text => text.ToLower();
 
             /// OPTIONS DE NETTOYAGE
             Console.WriteLine("Choisir les options:");
@@ -69,15 +72,35 @@ namespace MyApp
             bool ignoreCase = Console.ReadLine() == "o";
 
             // TODO:  05 Appliquer le nettoyage selon la demande utilisateur
-
+            if (ignoreSpaces)
+            {
+                linesA = linesA.Select(cleanSpaces).ToArray();
+                linesB = linesB.Select(cleanSpaces).ToArray();
+            }
+            if (ignoreTabs)
+            {
+                linesA = linesA.Select(cleanTabs).ToArray();
+                linesB = linesB.Select(cleanTabs).ToArray();
+            }
+            if (ignoreCase)
+            {
+                linesA = linesA.Select(enforceCase).ToArray();
+                linesB = linesB.Select(enforceCase).ToArray();
+            }
 
             // TODO: 06 Créer et remplir une liste de LinesComparison à partir de linesA et linesB
-            List<LinesComparison> comparisons = new();
+            List<LinesComparison> comparisons = linesA.Zip(linesB).Select((x, index) => new LinesComparison() {
+                Number = index,
+                ContentA = x.First,
+                ContentB = x.Second
+            }).ToList();
 
             // TODO: 07 Sélectionner les lignes qui ont des différences
-            var diffLines = new List<LinesComparison>();
+            var diffLines = comparisons.Where(x => x.ContentA != x.ContentB).ToList();
 
             // TODO: 08 Afficher le nombre de lignes identiques et différentes entre les 2 fichiers
+            Console.WriteLine("Lignes identiques :" + (comparisons.Count() - diffLines.Count()));
+            Console.WriteLine("Lignes différentes :" + diffLines.Count());
 
             // TODO: 09 Définir une fonction qui compte les différences (caractères différents) entre deux textes (sera utilisé pour les 2 lignes de A et B...)
             // Pour info/rappel, la fonction Zip (comme une fermeture éclair) permet d’associer deux listes.
@@ -85,9 +108,15 @@ namespace MyApp
             // Ainsi "12345".Zip("ABCDE", (a, b) => $"{a}{b}").ToList().ForEach(Console.Write);//1A2B3C4D5E
             // ATTENTION: zip ne prend que le nombre d’éléments minimum commun entre 2 listes...
             // Ceci implique une correction: en plus du nombre de différences, il faut ajouter la différence du nombre de caractères entre les deux...
-            Func<LinesComparison, int> countVariations = _ => -1;
+            Func<LinesComparison, int> countVariations = (LinesComparison lines) =>
+            {
+                int result = lines.ContentA.Zip(lines.ContentB).Where(x => x.First != x.Second).Count();
+                result += lines.LengthVariation;
+                return result;
+            } ;
 
             // TODO: 10 Afficher pour chaque ligne différente, le nombre de variations
+            diffLines.ForEach((lines) => Console.WriteLine($"Ligne {lines.NumberHuman} : {countVariations(lines)} différences"));
 
             /// Diff coloré
             // TODO: 11 Colorier les différences
@@ -96,14 +125,39 @@ namespace MyApp
             // Les lettres similaires sont en vert
             // Les lettres différentes sont en rouge (options entre[a/b])
             // On n’indique rien sur les caractères en plus ou en moins
+            diffLines.ForEach(x =>
+            {
+                Console.WriteLine($">Ligne {x.NumberHuman}:");
+                var zipContent = x.ContentA.Zip(x.ContentB).ToList();
+                zipContent.ForEach((x) =>
+                {
+                    if (x.First == x.Second)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write(x.First);
+                    }
+                    else
+                    {
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write($"[{x.First}/{x.Second}]");
+                    }
+                });
+                
+                    Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine("\n");
+
+            });
+
 
             /// Chiffrement
-            // TODO: 11 Créer une fonction qui chiffre le 1er fichier en décalant les caratères d’un nombre
+            // TODO: 12 Créer une fonction qui chiffre le 1er fichier en décalant les caratères d’un nombre
             //saisi par l’utilisateur (clé)
             // Le contenu chiffré est enregistré sur le disque dans le fichier "cipheredA.txt"
             // Le pendant de ReadAllLines est WriteAllLines
             Console.Write("\n\nSPECIAL FEATURE: Clé de chiffrement [1-25]: ");
             byte key = Convert.ToByte(Console.ReadLine());
+            File.WriteAllLines("cipheredA.txt", linesA.Select((line) => new string(line.Select((car) => Convert.ToChar((car + key) % char.MaxValue)).ToArray())));
 
         }
             /// <summary>
